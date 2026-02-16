@@ -1,0 +1,27 @@
+name: "@kalo-build/plugin-morphe-morpherepo"
+displayName: "Morphe MorpheRepo"
+description: "Generates MorpheRepo data access contract definitions from Morphe model definitions. Creates .repo YAML files describing repository interfaces, identifiers, filters, and CRUD operations."
+version: "1.0.0"
+
+input:
+  format: "KA:MO1:YAML1"
+  description: "Morphe YAML schema files"
+  suggestedStore:
+    name: "KA_MO_YAML"
+    type: "localFileSystem"
+    path: "./morphe"
+
+output:
+  format: "KA:MR1:YAML1"
+  description: "MorpheRepo YAML contract files"
+  suggestedStore:
+    name: "KA_RE_YAML"
+    type: "localFileSystem"
+    path: "./morphe/repo"
+
+configSchema:
+  excludeModels:
+    type: array
+    description: "List of model names to exclude from generation"
+    items:
+      type: string
