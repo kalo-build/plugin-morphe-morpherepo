@@ -46,7 +46,7 @@ func MorpheToMorpheRepo(config cfg.CompileConfig) error {
 			continue
 		}
 		model := allModels[name]
-		info := ExtractRepoInfo(model)
+		info := ExtractRepoInfo(model, allModels)
 		content := GenerateRepoYAML(info)
 
 		fileName := toSnakeCase(name) + ".repo"

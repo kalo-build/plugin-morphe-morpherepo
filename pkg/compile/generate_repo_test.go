@@ -29,7 +29,7 @@ func (suite *GenerateRepoTestSuite) TestGenerateRepoYAML_SimpleModel() {
 			"primary": {Fields: []string{"ID"}},
 			"code":    {Fields: []string{"Code"}},
 		},
-	})
+	}, nil)
 
 	result := compile.GenerateRepoYAML(info)
 
@@ -63,7 +63,7 @@ func (suite *GenerateRepoTestSuite) TestGenerateRepoYAML_ModelWithForOne() {
 		Related: map[string]yaml.ModelRelation{
 			"Organization": {Type: "ForOne"},
 		},
-	})
+	}, nil)
 
 	result := compile.GenerateRepoYAML(info)
 
@@ -89,7 +89,7 @@ func (suite *GenerateRepoTestSuite) TestGenerateRepoYAML_ModelNoSecondaryIdentif
 		Related: map[string]yaml.ModelRelation{
 			"Project": {Type: "ForOne"},
 		},
-	})
+	}, nil)
 
 	result := compile.GenerateRepoYAML(info)
 
@@ -115,7 +115,7 @@ func (suite *GenerateRepoTestSuite) TestGenerateRepoYAML_HasOneHasManyNotInFilte
 			"Project": {Type: "HasMany"},
 			"Profile": {Type: "HasOne"},
 		},
-	})
+	}, nil)
 
 	result := compile.GenerateRepoYAML(info)
 

@@ -2,6 +2,7 @@ package compile
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/kalo-build/morphe-go/pkg/yaml"
 )
@@ -34,7 +35,9 @@ type RepoInfo struct {
 }
 
 // ExtractRepoInfo derives repository contract information from a Morphe model.
-func ExtractRepoInfo(model yaml.Model) RepoInfo {
+// allModels is required to resolve rel: prefixed identifier fields to their
+// target model's primary key type.
+func ExtractRepoInfo(model yaml.Model, allModels map[string]yaml.Model) RepoInfo {
 	info := RepoInfo{
 		ModelName: model.Name,
 		RepoName:  model.Name + "Repository",
@@ -46,14 +49,8 @@ func ExtractRepoInfo(model yaml.Model) RepoInfo {
 		id := model.Identifiers[idName]
 		repoID := RepoIdentifier{Name: idName}
 		for _, fieldName := range id.Fields {
-			fieldType := yaml.ModelFieldType("String") // default
-			if field, ok := model.Fields[fieldName]; ok {
-				fieldType = field.Type
-			}
-			repoID.Fields = append(repoID.Fields, RepoIdentifierField{
-				Name: fieldName,
-				Type: fieldType,
-			})
+			resolved := resolveIdentifierField(fieldName, model, allModels)
+			repoID.Fields = append(repoID.Fields, resolved...)
 		}
 		info.Identifiers = append(info.Identifiers, repoID)
 	}
@@ -115,3 +112,59 @@ func lowerFirst(s string) string {
 	}
 	return string(runes)
 }
+
+func resolveIdentifierField(fieldName string, model yaml.Model, allModels map[string]yaml.Model) []RepoIdentifierField {
+	if !strings.HasPrefix(fieldName, "rel:") {
+		fieldType := yaml.ModelFieldType("String")
+		if field, ok := model.Fields[fieldName]; ok {
+			fieldType = field.Type
+		}
+		return []RepoIdentifierField{{Name: fieldName, Type: fieldType}}
+	}
+
+	relationName := strings.TrimPrefix(fieldName, "rel:")
+	relation, hasRelation := model.Related[relationName]
+	if !hasRelation {
+		return []RepoIdentifierField{{Name: relationName + "ID", Type: "String"}}
+	}
+
+	if isPolyFor(relation.Type) {
+		return []RepoIdentifierField{
+			{Name: relationName + "Type", Type: "String"},
+			{Name: relationName + "ID", Type: "String"},
+		}
+	}
+
+	targetName := relationName
+	if relation.Aliased != "" {
+		targetName = relation.Aliased
+	}
+
+	fkType := resolveTargetPrimaryType(targetName, allModels)
+	return []RepoIdentifierField{{Name: relationName + "ID", Type: fkType}}
+}
+
+func resolveTargetPrimaryType(targetModelName string, allModels map[string]yaml.Model) yaml.ModelFieldType {
+	targetModel, exists := allModels[targetModelName]
+	if !exists {
+		return "UUID"
+	}
+	primaryID, hasPrimary := targetModel.Identifiers["primary"]
+	if !hasPrimary || len(primaryID.Fields) == 0 {
+		return "UUID"
+	}
+	primaryFieldName := primaryID.Fields[0]
+	if strings.HasPrefix(primaryFieldName, "rel:") {
+		return "UUID"
+	}
+	if field, ok := targetModel.Fields[primaryFieldName]; ok {
+		return field.Type
+	}
+	return "UUID"
+}
+
+func isPolyFor(relationType string) bool {
+	lower := strings.ToLower(relationType)
+	return strings.HasPrefix(lower, "for") && strings.HasSuffix(lower, "poly")
+}
+
